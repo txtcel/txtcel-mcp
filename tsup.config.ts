@@ -15,5 +15,16 @@ export default defineConfig({
   noExternal: [/.*/],
   // Stdio servers must not print anything to stdout besides the MCP protocol,
   // so the shebang is added here and all logging goes to stderr.
-  banner: { js: '#!/usr/bin/env node' },
+  //
+  // The ESM bundle inlines CJS deps (safe-buffer/bs58/base-x) that call
+  // `require('buffer')` for Node builtins. In an ESM context `require` is
+  // undefined, so esbuild's runtime shim throws "Dynamic require of ...".
+  // Define a real `require` via createRequire so those builtin lookups work.
+  banner: {
+    js: [
+      '#!/usr/bin/env node',
+      "import { createRequire as __txtcelCreateRequire } from 'node:module';",
+      'const require = __txtcelCreateRequire(import.meta.url);',
+    ].join('\n'),
+  },
 })
