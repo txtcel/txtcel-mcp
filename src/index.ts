@@ -6,7 +6,6 @@ import { registerMessagingTools } from './tools/messaging.js'
 import { registerFollowTools } from './tools/follow.js'
 import { registerReadTools } from './tools/read.js'
 import { registerThreadAdminTools } from './tools/threadAdmin.js'
-import { registerGlobalAdminTools } from './tools/globalAdmin.js'
 
 async function main(): Promise<void> {
   // Validate config + wallet eagerly so misconfiguration fails fast with a
@@ -14,13 +13,12 @@ async function main(): Promise<void> {
   const config = loadConfig()
   const wallet = loadWallet()
 
-  const server = new McpServer({ name: 'txtcel-mcp', version: '0.1.0' })
+  const server = new McpServer({ name: 'txtcel-mcp', version: '0.1.2' })
 
   registerMessagingTools(server)
   registerFollowTools(server)
   registerReadTools(server)
   registerThreadAdminTools(server)
-  registerGlobalAdminTools(server)
 
   const transport = new StdioServerTransport()
   await server.connect(transport)
