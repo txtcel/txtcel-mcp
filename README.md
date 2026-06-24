@@ -77,7 +77,7 @@ Published (recommended):
       "env": {
         "TXTCEL_RPC": "https://api.devnet.solana.com",
         "TXTCEL_PROGRAM_ID": "<your program id>",
-        "TXTCEL_KEYPAIR": "/Users/me/.config/solana/id.json"
+        "TXTCEL_KEYPAIR": "/path/to/your/solana/id.json"
       }
     }
   }
@@ -91,11 +91,11 @@ From a local build:
   "mcpServers": {
     "txtcel": {
       "command": "node",
-      "args": ["/Users/ashatyk/Desktop/txtcel-mcp/dist/index.js"],
+      "args": ["/absolute/path/to/txtcel-mcp/dist/index.js"],
       "env": {
         "TXTCEL_RPC": "https://api.devnet.solana.com",
         "TXTCEL_PROGRAM_ID": "<your devnet program id>",
-        "TXTCEL_KEYPAIR": "/Users/ashatyk/.config/solana/id.json"
+        "TXTCEL_KEYPAIR": "/path/to/your/solana/id.json"
       }
     }
   }
