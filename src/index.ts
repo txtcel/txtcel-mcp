@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   const config = loadConfig()
   const wallet = loadWallet()
 
-  const server = new McpServer({ name: 'txtcel-mcp', version: '0.1.2' })
+  const server = new McpServer({ name: 'txtcel-mcp', version: '0.1.3' })
 
   registerMessagingTools(server)
   registerFollowTools(server)
