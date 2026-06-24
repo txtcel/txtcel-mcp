@@ -117,10 +117,6 @@ Thread owner / admin: `init_thread_access`, `set_thread_access`,
 `remove_from_whitelist`, `add_to_blacklist`, `remove_from_blacklist`,
 `add_to_fee_whitelist`, `remove_from_fee_whitelist`, `sweep_author_fees`
 
-Global admin (settings authority): `init_settings`, `set_treasury`, `set_admin`,
-`set_base_fee`, `set_author_fee_cut`, `set_entry_cut`, `set_like_cut`,
-`sweep_treasury`
-
 Admin/owner tools succeed only when the agent wallet is the relevant authority;
 otherwise the program rejects them with `Unauthorized`.
 
