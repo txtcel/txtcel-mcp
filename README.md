@@ -107,6 +107,12 @@ From a local build:
 Messaging: `create_channel`, `send_message`, `append_to_message`,
 `prepare_alloc`, `like_message`, `close_message`, `request_access`
 
+`send_message` posts the message (a `fill_slot` plus any `append_content`
+chunks for long text) and then fires a *best-effort* page extension when the
+tail alloc page is filling up. Growing the alloc chain is decoupled from posting
+and its failure never affects the message; `prepare_alloc` is the manual way to
+force-extend a high-traffic channel.
+
 Follow: `follow_channel`, `unfollow_channel`
 
 Read-only: `get_wallet`, `get_channel`, `get_message`, `read_messages`,

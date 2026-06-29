@@ -3,6 +3,7 @@ import { z } from 'zod'
 import {
   buildAppendContentInstruction,
   buildCloseAccountInstruction,
+  buildExtendAllocTransaction,
   buildLikeContentInstruction,
   buildPrepareAllocInstruction,
   buildRequestAccessInstruction,
@@ -20,7 +21,7 @@ import {
 import { loadConfig } from '../config.js'
 import { loadWallet } from '../wallet.js'
 import { resolveSeed, seedToAddress, seedToHex } from '../seed.js'
-import { sendInstructions, sendTransactions, explorerTx } from '../tx.js'
+import { sendInstructions, sendTransactions, trySendBestEffort, explorerTx } from '../tx.js'
 import { handler, jsonResult, toLamports } from '../result.js'
 
 const channelArg = z
@@ -62,7 +63,7 @@ export function registerMessagingTools(server: McpServer): void {
     {
       title: 'Send message',
       description:
-        'Post a text message to a channel as the agent wallet. Handles fees, slot selection and chunking of long messages automatically.',
+        'Post a text message to a channel as the agent wallet. Handles fees, slot selection and chunking of long messages automatically. Posting is decoupled from growing the alloc chain: after the post confirms, a best-effort page extension is fired when the tail page is filling up (its failure never affects the post).',
       inputSchema: {
         channel: channelArg,
         text: z.string().min(1).describe('Message text (UTF-8, up to 8192 bytes).'),
@@ -95,10 +96,27 @@ export function registerMessagingTools(server: McpServer): void {
         replyTo,
       )
       const signatures = await sendTransactions(payer, txs)
+
+      // Decoupled, best-effort extend: after the post confirms, grow the alloc
+      // chain when the tail page has crossed the SDK's extend threshold so
+      // high-traffic channels keep free slots ahead of demand. This is racy and
+      // optional — `buildExtendAllocTransaction` returns null when no extend is
+      // due, and `trySendBestEffort` swallows any failure so it can never make
+      // the post fail.
+      let extendSignature: string | null = null
+      try {
+        const extendTx = await buildExtendAllocTransaction(connection, programId, payer.publicKey, seed)
+        if (extendTx) extendSignature = await trySendBestEffort(payer, extendTx)
+      } catch {
+        extendSignature = null
+      }
+
       return jsonResult({
         channel: seedToAddress(seed),
         signatures,
         explorer: signatures.map(explorerTx),
+        extendSignature,
+        extendExplorer: extendSignature ? explorerTx(extendSignature) : null,
       })
     }),
   )
@@ -144,7 +162,7 @@ export function registerMessagingTools(server: McpServer): void {
     {
       title: 'Prepare alloc',
       description:
-        'Pre-create the next alloc page in a channel so there are free slots ahead of demand. Mostly useful for high-traffic channels.',
+        'Manually pre-create the next alloc page (allocSeq + 1) in a channel so there are free slots ahead of demand. send_message already does this best-effort; use this to force-extend a high-traffic channel. Racy by design: it fails with InvalidAllocSeq if the chain tail moved on.',
       inputSchema: {
         channel: channelArg,
         allocSeq: z.number().int().describe('Current alloc seq to extend from.'),

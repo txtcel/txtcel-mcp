@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { Connection, Keypair, PublicKey } from '@solana/web3.js'
-import { buildSendMessageTransactions } from '@txtcel/protocol'
+import { buildExtendAllocTransaction, buildSendMessageTransactions } from '@txtcel/protocol'
 
 const RPC = process.env.TXTCEL_RPC ?? 'https://api.devnet.solana.com'
 const PROGRAM_ID = process.env.TXTCEL_PROGRAM_ID ?? 'CiJm3YBx4qK5tBMwEjfmVtyu5jwJmTXw9Ro9GB8P62jv'
@@ -58,8 +58,25 @@ for (const tx of txs) {
   sigs.push(sig)
 }
 
+// Decoupled, best-effort extend: grow the alloc chain after the post when the
+// tail page is filling up. Racy and optional — never let it fail the post.
+let extendSig = null
+try {
+  const extendTx = await buildExtendAllocTransaction(connection, programId, payer.publicKey, seed)
+  if (extendTx) {
+    extendTx.feePayer = payer.publicKey
+    const { blockhash } = await connection.getLatestBlockhash('confirmed')
+    extendTx.recentBlockhash = blockhash
+    extendTx.sign(payer)
+    extendSig = await connection.sendRawTransaction(extendTx.serialize())
+  }
+} catch {
+  extendSig = null
+}
+
 console.log(JSON.stringify({
   ok: true,
   signatures: sigs,
+  extendSignature: extendSig,
   explorer: sigs.map((s) => `https://explorer.solana.com/tx/${s}?cluster=devnet`),
 }, null, 2))

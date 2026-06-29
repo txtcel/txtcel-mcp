@@ -70,6 +70,29 @@ export async function sendTransactions(
   return sigs
 }
 
+/**
+ * Signs and submits a single transaction best-effort: it NEVER throws and
+ * returns the signature or `null`. Used for the decoupled, optional alloc
+ * extend (`buildExtendAllocTransaction`), which must never fail a post — the
+ * extend is racy and is expected to bounce (e.g. `InvalidAllocSeq`) when
+ * another sender already grew the chain.
+ */
+export async function trySendBestEffort(
+  payer: Keypair,
+  tx: Transaction,
+): Promise<string | null> {
+  try {
+    const { connection } = loadConfig()
+    tx.feePayer = payer.publicKey
+    const { blockhash } = await connection.getLatestBlockhash('confirmed')
+    tx.recentBlockhash = blockhash
+    tx.sign(payer)
+    return await connection.sendRawTransaction(tx.serialize())
+  } catch {
+    return null
+  }
+}
+
 /** Solana explorer URL for a signature on the configured cluster. */
 export function explorerTx(signature: string): string {
   const { rpcUrl } = loadConfig()
