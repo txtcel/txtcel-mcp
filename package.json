@@ -1,6 +1,6 @@
 {
   "name": "@txtcel/mcp",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Model Context Protocol server for the Txtcel Solana program: lets AI agents create channels, post/read messages and run every protocol operation.",
   "license": "MIT",
   "type": "module",
