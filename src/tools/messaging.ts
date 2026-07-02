@@ -1,6 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import {
+  CONTENT_SLOTS,
+  EXTEND_THRESHOLD,
   buildAppendContentInstruction,
   buildCloseAccountInstruction,
   buildExtendAllocTransaction,
@@ -9,12 +11,15 @@ import {
   buildRequestAccessInstruction,
   buildSendMessageTransactions,
   createRootAlloc,
+  deriveAccessPda,
   deriveAuthorFeePda,
   deriveContentPda,
   deriveLikesPda,
   deriveSettingsPda,
   deriveThreadPda,
   deriveTreasuryShardPda,
+  loadThreadAccess,
+  loadThreadNode,
   randomAuthorFeeShard,
   randomTreasuryShard,
 } from '@txtcel/protocol'
@@ -132,14 +137,19 @@ export function registerMessagingTools(server: McpServer): void {
         allocSeq: z.number().int().describe('allocSeq of the target message.'),
         slot: z.number().int().describe('slot of the target message.'),
         text: z.string().min(1).describe('Text chunk to append.'),
+        maxFee: z
+          .union([z.number(), z.string()])
+          .optional()
+          .describe('Max base fee in lamports willing to pay for the append (slippage cap). Default 100000000 (0.1 SOL).'),
       },
     },
-    handler(async ({ channel, allocSeq, slot, text }) => {
+    handler(async ({ channel, allocSeq, slot, text, maxFee }) => {
       const { programId } = loadConfig()
       const payer = loadWallet()
       const seed = resolveSeed(channel)
       const treasuryShardIdx = randomTreasuryShard()
       const authorFeeShardIdx = randomAuthorFeeShard()
+      const cap = maxFee === undefined ? 100_000_000n : toLamports(maxFee)
       const ix = buildAppendContentInstruction(
         programId,
         payer.publicKey,
@@ -151,6 +161,7 @@ export function registerMessagingTools(server: McpServer): void {
         new TextEncoder().encode(text),
         treasuryShardIdx,
         authorFeeShardIdx,
+        cap,
       )
       const signature = await sendInstructions(payer, [ix])
       return jsonResult({ signature, explorer: explorerTx(signature) })
@@ -162,17 +173,41 @@ export function registerMessagingTools(server: McpServer): void {
     {
       title: 'Prepare alloc',
       description:
-        'Manually pre-create the next alloc page (allocSeq + 1) in a channel so there are free slots ahead of demand. send_message already does this best-effort; use this to force-extend a high-traffic channel. Racy by design: it fails with InvalidAllocSeq if the chain tail moved on.',
+        'Manually pre-create the next alloc page (allocSeq + 1) in a channel. Extension is occupancy-gated on-chain: unless the agent wallet is the channel author (or the last extension is older than the time hatch), the tail page must hold at least EXTEND_THRESHOLD messages — this tool gathers the witness proof automatically and fails with an explanation when occupancy is too low. Racy by design: it fails with InvalidAllocSeq if the chain tail moved on.',
       inputSchema: {
         channel: channelArg,
         allocSeq: z.number().int().describe('Current alloc seq to extend from.'),
       },
     },
     handler(async ({ channel, allocSeq }) => {
-      const { programId } = loadConfig()
+      const { connection, programId } = loadConfig()
       const payer = loadWallet()
       const seed = resolveSeed(channel)
-      const ix = buildPrepareAllocInstruction(programId, payer.publicKey, seed, allocSeq)
+
+      const thread = await loadThreadNode(connection, programId, deriveThreadPda(programId, seed))
+      const isAuthor = payer.publicKey.toBase58() === thread.author
+
+      // Не-автор обязан доказать занятость хвоста witness-набором.
+      let witnessSlots: number[] = []
+      if (!isAuthor) {
+        const pdas = Array.from({ length: CONTENT_SLOTS }, (_, slot) => deriveContentPda(programId, seed, allocSeq, slot))
+        const infos = await connection.getMultipleAccountsInfo(pdas)
+        const occupied = infos.reduce<number[]>((acc, info, slot) => {
+          if (info !== null) acc.push(slot)
+          return acc
+        }, [])
+        if (occupied.length < EXTEND_THRESHOLD) {
+          return jsonResult({
+            error: 'occupancy below extend threshold',
+            occupied: occupied.length,
+            required: EXTEND_THRESHOLD,
+            hint: 'Only the channel author (or the daily time hatch) can extend a page this empty.',
+          })
+        }
+        witnessSlots = occupied.slice(0, EXTEND_THRESHOLD)
+      }
+
+      const ix = buildPrepareAllocInstruction(programId, payer.publicKey, seed, allocSeq, witnessSlots)
       const signature = await sendInstructions(payer, [ix])
       return jsonResult({ signature, explorer: explorerTx(signature) })
     }),
@@ -236,14 +271,26 @@ export function registerMessagingTools(server: McpServer): void {
     {
       title: 'Request channel access',
       description:
-        'Pay the entry fee to join a gated channel so the agent wallet can post in it.',
-      inputSchema: { channel: channelArg },
+        'Pay the entry fee to join a gated channel so the agent wallet can post in it. The current on-chain entry fee is used as the slippage cap unless maxFee is given.',
+      inputSchema: {
+        channel: channelArg,
+        maxFee: z
+          .union([z.number(), z.string()])
+          .optional()
+          .describe('Max entry fee in lamports willing to pay (slippage cap). Defaults to the current on-chain entry fee.'),
+      },
     },
-    handler(async ({ channel }) => {
-      const { programId } = loadConfig()
+    handler(async ({ channel, maxFee }) => {
+      const { connection, programId } = loadConfig()
       const payer = loadWallet()
       const seed = resolveSeed(channel)
-      const ix = buildRequestAccessInstruction(programId, payer.publicKey, seed)
+      // Pin the price: without an explicit cap, cap at the fee visible now so
+      // the channel admin cannot front-run a fee hike.
+      const cap =
+        maxFee === undefined
+          ? (await loadThreadAccess(connection, programId, deriveAccessPda(programId, seed))).entryFee
+          : toLamports(maxFee)
+      const ix = buildRequestAccessInstruction(programId, payer.publicKey, seed, cap)
       const signature = await sendInstructions(payer, [ix])
       return jsonResult({ signature, explorer: explorerTx(signature) })
     }),
