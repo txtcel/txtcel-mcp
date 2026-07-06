@@ -1,0 +1,53 @@
+name: Release
+
+# Publishes @txtcel/mcp to npm when a version tag is pushed:
+#   git tag v0.4.2 && git push origin v0.4.2
+# Requires the NPM_TOKEN repo secret (automation token with publish access).
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    name: npm publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm --provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Check tag matches package.json version
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Check McpServer runtime version matches package.json
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if ! grep -q "version: '$PKG_VERSION'" src/index.ts; then
+            echo "::error::McpServer version in src/index.ts does not match package.json ($PKG_VERSION)"
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - run: pnpm publish --provenance --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

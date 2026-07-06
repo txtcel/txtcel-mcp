@@ -187,7 +187,6 @@ export function registerMessagingTools(server: McpServer): void {
       const thread = await loadThreadNode(connection, programId, deriveThreadPda(programId, seed))
       const isAuthor = payer.publicKey.toBase58() === thread.author
 
-      // Не-автор обязан доказать занятость хвоста witness-набором.
       let witnessSlots: number[] = []
       if (!isAuthor) {
         const pdas = Array.from({ length: CONTENT_SLOTS }, (_, slot) => deriveContentPda(programId, seed, allocSeq, slot))
