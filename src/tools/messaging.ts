@@ -49,10 +49,12 @@ export function registerMessagingTools(server: McpServer): void {
       },
     },
     handler(async ({ title, messageFee }) => {
-      const { connection, programId } = loadConfig()
+      const { connection, programId, priorityFee } = loadConfig()
       const payer = loadWallet()
       const fee = messageFee === undefined ? 0n : toLamports(messageFee)
-      const res = await createRootAlloc(connection, programId.toBase58(), payer, fee, title)
+      const res = await createRootAlloc(
+        connection, programId.toBase58(), payer, fee, title, undefined, priorityFee,
+      )
       return jsonResult({
         title,
         seed: seedToHex(res.seed),
@@ -85,7 +87,7 @@ export function registerMessagingTools(server: McpServer): void {
       },
     },
     handler(async ({ channel, text, replyToAllocSeq, replyToSlot }) => {
-      const { connection, programId } = loadConfig()
+      const { connection, programId, priorityFee } = loadConfig()
       const payer = loadWallet()
       const seed = resolveSeed(channel)
       const replyTo =
@@ -99,6 +101,7 @@ export function registerMessagingTools(server: McpServer): void {
         seed,
         text,
         replyTo,
+        priorityFee,
       )
       const signatures = await sendTransactions(payer, txs)
 
@@ -110,7 +113,9 @@ export function registerMessagingTools(server: McpServer): void {
       // the post fail.
       let extendSignature: string | null = null
       try {
-        const extendTx = await buildExtendAllocTransaction(connection, programId, payer.publicKey, seed)
+        const extendTx = await buildExtendAllocTransaction(
+          connection, programId, payer.publicKey, seed, priorityFee,
+        )
         if (extendTx) extendSignature = await trySendBestEffort(payer, extendTx)
       } catch {
         extendSignature = null

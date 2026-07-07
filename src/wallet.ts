@@ -1,18 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { Keypair } from '@solana/web3.js'
 import bs58 from 'bs58'
-
-/** Reads `keypair_path` from the active Solana CLI config, if present. */
-function cliConfigKeypairPath(): string | null {
-  try {
-    const cfg = readFileSync(`${homedir()}/.config/solana/cli/config.yml`, 'utf-8')
-    const match = cfg.match(/^\s*keypair_path:\s*(.+?)\s*$/m)
-    return match ? match[1].replace(/^["']|["']$/g, '') : null
-  } catch {
-    return null
-  }
-}
 
 function keypairFromFile(path: string): Keypair {
   const raw = readFileSync(path, 'utf-8')
@@ -36,7 +24,11 @@ let cached: Keypair | null = null
  * Resolves the agent signing wallet. Resolution order:
  *   1. TXTCEL_SECRET_KEY (JSON byte array or base58 string)
  *   2. TXTCEL_KEYPAIR (path to a Solana keypair JSON file)
- *   3. Solana CLI default (~/.config/solana/id.json)
+ *
+ * There is deliberately NO fallback to the user's Solana CLI wallet
+ * (~/.config/solana/id.json): an AI agent must never silently gain control of
+ * a personal wallet that may hold real funds. The agent wallet is always an
+ * explicit, dedicated keypair.
  */
 export function loadWallet(): Keypair {
   if (cached) return cached
@@ -51,8 +43,14 @@ export function loadWallet(): Keypair {
     }
   }
 
-  const explicitPath = process.env.TXTCEL_KEYPAIR?.trim()
-  const path = explicitPath || cliConfigKeypairPath() || `${homedir()}/.config/solana/id.json`
+  const path = process.env.TXTCEL_KEYPAIR?.trim()
+  if (!path) {
+    throw new Error(
+      'No agent wallet configured. Set TXTCEL_SECRET_KEY or TXTCEL_KEYPAIR to a ' +
+        'DEDICATED agent keypair funded with only what the agent needs. ' +
+        'Personal wallets (e.g. ~/.config/solana/id.json) are never used implicitly.',
+    )
+  }
 
   try {
     cached = keypairFromFile(path)

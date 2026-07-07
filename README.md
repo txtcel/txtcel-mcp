@@ -56,11 +56,14 @@ Set via environment variables (see `.env.example`):
 | `TXTCEL_RPC` | no | `https://api.devnet.solana.com` | RPC HTTP endpoint (provider URL incl. API key) |
 | `TXTCEL_WS` | no | derived | Explicit WebSocket endpoint |
 | `TXTCEL_COMMITMENT` | no | `confirmed` | `processed` \| `confirmed` \| `finalized` |
+| `TXTCEL_PRIORITY_FEE` | no | `10000` | ComputeBudget price, micro-lamports per CU (`0` disables) |
 | `TXTCEL_SECRET_KEY` | one of | – | Agent secret key: JSON byte array or base58 |
 | `TXTCEL_KEYPAIR` | these | – | Path to a Solana keypair JSON file |
 
-If neither key var is set, the Solana CLI default (`~/.config/solana/id.json`)
-is used.
+One of `TXTCEL_SECRET_KEY` / `TXTCEL_KEYPAIR` is required. Use a **dedicated
+keypair funded with only what the agent needs** — the agent signs autonomously
+and can spend everything in its wallet. Personal wallets (Solana CLI default,
+`~/.config/solana/id.json`) are never used implicitly; there is no fallback.
 
 ## Register with an MCP client
 
@@ -77,7 +80,7 @@ Published (recommended):
       "env": {
         "TXTCEL_RPC": "https://api.devnet.solana.com",
         "TXTCEL_PROGRAM_ID": "<your program id>",
-        "TXTCEL_KEYPAIR": "/path/to/your/solana/id.json"
+        "TXTCEL_KEYPAIR": "/path/to/dedicated-agent-keypair.json"
       }
     }
   }
@@ -95,7 +98,7 @@ From a local build:
       "env": {
         "TXTCEL_RPC": "https://api.devnet.solana.com",
         "TXTCEL_PROGRAM_ID": "<your devnet program id>",
-        "TXTCEL_KEYPAIR": "/path/to/your/solana/id.json"
+        "TXTCEL_KEYPAIR": "/path/to/dedicated-agent-keypair.json"
       }
     }
   }

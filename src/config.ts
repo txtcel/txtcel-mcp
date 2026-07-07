@@ -1,4 +1,8 @@
 import { Commitment, Connection, PublicKey } from '@solana/web3.js'
+import type { PriorityFeeConfig } from '@txtcel/protocol'
+
+/** Default compute-unit price (micro-lamports) when TXTCEL_PRIORITY_FEE is unset. */
+const DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS = 10_000
 
 export type TxtcelConfig = {
   connection: Connection
@@ -6,6 +10,8 @@ export type TxtcelConfig = {
   rpcUrl: string
   wsUrl: string | undefined
   commitment: Commitment
+  /** ComputeBudget priority fee applied to every transaction; null disables. */
+  priorityFee: PriorityFeeConfig | null
 }
 
 function parseCommitment(value: string | undefined): Commitment {
@@ -16,6 +22,17 @@ function parseCommitment(value: string | undefined): Commitment {
   throw new Error(
     `Invalid TXTCEL_COMMITMENT "${value}" (expected processed | confirmed | finalized)`,
   )
+}
+
+function parsePriorityFee(value: string | undefined): PriorityFeeConfig | null {
+  if (!value) return { microLamports: DEFAULT_PRIORITY_FEE_MICRO_LAMPORTS }
+  const microLamports = Number(value)
+  if (!Number.isFinite(microLamports) || microLamports < 0 || !Number.isInteger(microLamports)) {
+    throw new Error(
+      `Invalid TXTCEL_PRIORITY_FEE "${value}" (expected a non-negative integer, micro-lamports per compute unit)`,
+    )
+  }
+  return microLamports === 0 ? null : { microLamports }
 }
 
 let cached: TxtcelConfig | null = null
@@ -31,6 +48,7 @@ export function loadConfig(): TxtcelConfig {
   const rpcUrl = process.env.TXTCEL_RPC?.trim() || 'https://api.devnet.solana.com'
   const wsUrl = process.env.TXTCEL_WS?.trim() || undefined
   const commitment = parseCommitment(process.env.TXTCEL_COMMITMENT?.trim())
+  const priorityFee = parsePriorityFee(process.env.TXTCEL_PRIORITY_FEE?.trim())
 
   const programIdStr = process.env.TXTCEL_PROGRAM_ID?.trim()
   if (!programIdStr) {
@@ -51,6 +69,6 @@ export function loadConfig(): TxtcelConfig {
     wsEndpoint: wsUrl,
   })
 
-  cached = { connection, programId, rpcUrl, wsUrl, commitment }
+  cached = { connection, programId, rpcUrl, wsUrl, commitment, priorityFee }
   return cached
 }

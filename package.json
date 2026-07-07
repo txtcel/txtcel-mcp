@@ -1,6 +1,6 @@
 {
   "name": "@txtcel/mcp",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Model Context Protocol server for the Txtcel Solana program: lets AI agents create channels, post/read messages and run every protocol operation.",
   "license": "MIT",
   "type": "module",
@@ -28,6 +28,9 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "node scripts/smoke.mjs",
     "clean": "rm -rf dist",
     "start": "node dist/index.js",
     "prepublishOnly": "npm run clean && npm run build"
@@ -35,11 +38,12 @@
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
     "@solana/web3.js": "^1.98.4",
-    "@txtcel/protocol": "^0.7.2",
+    "@txtcel/protocol": "^0.9.0",
     "@types/node": "^22.10.0",
     "bs58": "^6.0.0",
     "tsup": "^8.3.5",
     "typescript": "~5.9.3",
+    "vitest": "^4.1.10",
     "zod": "^3.23.8"
   },
   "engines": {

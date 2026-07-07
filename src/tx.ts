@@ -1,37 +1,20 @@
 import {
-  Connection,
   Keypair,
   PublicKey,
   Transaction,
   TransactionInstruction,
 } from '@solana/web3.js'
+import {
+  buildPriorityFeeInstructions,
+  confirmTransactionWithRebroadcast,
+} from '@txtcel/protocol'
 import { loadConfig } from './config.js'
 
-const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
-
-async function confirm(
-  connection: Connection,
-  signature: string,
-  timeoutMs = 90_000,
-): Promise<void> {
-  const start = Date.now()
-  while (Date.now() - start < timeoutMs) {
-    const { value } = await connection.getSignatureStatuses([signature])
-    const status = value?.[0]
-    if (
-      status?.confirmationStatus === 'confirmed' ||
-      status?.confirmationStatus === 'finalized'
-    ) {
-      if (status.err) throw new Error(`Transaction failed: ${JSON.stringify(status.err)}`)
-      return
-    }
-    await sleep(1_500)
-  }
-  throw new Error(`Confirmation timeout for ${signature}`)
-}
-
 /**
- * Signs, sends and confirms a single transaction built from raw instructions.
+ * Signs, sends and confirms a single transaction built from raw instructions,
+ * prepending the configured priority fee. Confirmation is expiry-aware: the
+ * signed bytes are re-broadcast until the transaction lands or its blockhash
+ * expires (mainnet RPC nodes drop queued transactions under load).
  * The agent wallet is always the fee payer and first signer; extra signers
  * (e.g. a fresh thread keypair for create_channel) are appended.
  */
@@ -40,18 +23,26 @@ export async function sendInstructions(
   instructions: TransactionInstruction[],
   extraSigners: Keypair[] = [],
 ): Promise<string> {
-  const { connection } = loadConfig()
-  const tx = new Transaction().add(...instructions)
+  const { connection, priorityFee } = loadConfig()
+  const tx = new Transaction()
+  if (priorityFee) tx.add(...buildPriorityFeeInstructions(priorityFee))
+  tx.add(...instructions)
   tx.feePayer = payer.publicKey
-  const { blockhash } = await connection.getLatestBlockhash('confirmed')
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
   tx.recentBlockhash = blockhash
   tx.sign(payer, ...extraSigners)
-  const sig = await connection.sendRawTransaction(tx.serialize())
-  await confirm(connection, sig)
-  return sig
+  const rawTransaction = tx.serialize()
+  const signature = await connection.sendRawTransaction(rawTransaction)
+  await confirmTransactionWithRebroadcast({ connection, rawTransaction, signature, lastValidBlockHeight })
+  return signature
 }
 
-/** Sends a pre-built list of transactions sequentially (e.g. fill + append). */
+/**
+ * Sends a pre-built list of transactions sequentially (e.g. fill + append).
+ * Each transaction gets its own fresh blockhash and expiry-aware confirmation.
+ * Priority-fee instructions are expected to already be part of the prebuilt
+ * transactions (the SDK builders add them when given `priorityFee`).
+ */
 export async function sendTransactions(
   payer: Keypair,
   txs: Transaction[],
@@ -60,12 +51,13 @@ export async function sendTransactions(
   const sigs: string[] = []
   for (const tx of txs) {
     tx.feePayer = payer.publicKey
-    const { blockhash } = await connection.getLatestBlockhash('confirmed')
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed')
     tx.recentBlockhash = blockhash
     tx.sign(payer)
-    const sig = await connection.sendRawTransaction(tx.serialize())
-    await confirm(connection, sig)
-    sigs.push(sig)
+    const rawTransaction = tx.serialize()
+    const signature = await connection.sendRawTransaction(rawTransaction)
+    await confirmTransactionWithRebroadcast({ connection, rawTransaction, signature, lastValidBlockHeight })
+    sigs.push(signature)
   }
   return sigs
 }

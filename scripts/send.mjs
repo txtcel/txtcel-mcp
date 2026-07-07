@@ -1,13 +1,22 @@
 // One-off message sender using the same code path as the MCP send_message tool.
-// Usage: node scripts/send.mjs <channelHexSeedOrAddress> "<text>"
+// Usage: TXTCEL_PROGRAM_ID=... TXTCEL_KEYPAIR=... node scripts/send.mjs <channelHexSeedOrAddress> "<text>"
 import { readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { Connection, Keypair, PublicKey } from '@solana/web3.js'
 import { buildExtendAllocTransaction, buildSendMessageTransactions } from '@txtcel/protocol'
 
 const RPC = process.env.TXTCEL_RPC ?? 'https://api.devnet.solana.com'
-const PROGRAM_ID = process.env.TXTCEL_PROGRAM_ID ?? 'CiJm3YBx4qK5tBMwEjfmVtyu5jwJmTXw9Ro9GB8P62jv'
-const KEYPAIR = process.env.TXTCEL_KEYPAIR ?? `${homedir()}/.config/solana/id.json`
+const PROGRAM_ID = process.env.TXTCEL_PROGRAM_ID
+const KEYPAIR = process.env.TXTCEL_KEYPAIR
+
+if (!PROGRAM_ID) {
+  console.error('TXTCEL_PROGRAM_ID is required (no hardcoded default).')
+  process.exit(1)
+}
+// Same policy as the MCP server: never touch the personal CLI wallet implicitly.
+if (!KEYPAIR) {
+  console.error('TXTCEL_KEYPAIR is required (a dedicated agent keypair; the CLI default wallet is never used implicitly).')
+  process.exit(1)
+}
 
 const channel = process.argv[2]
 const text = process.argv[3]
