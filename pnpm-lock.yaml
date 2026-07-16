@@ -15,8 +15,8 @@ importers:
         specifier: ^1.98.4
         version: 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@txtcel/protocol':
-        specifier: ^0.9.0
-        version: 0.9.0(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
+        specifier: ^0.9.1
+        version: 0.9.1(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
       '@types/node':
         specifier: ^22.10.0
         version: 22.20.0
@@ -521,8 +521,8 @@ packages:
   '@swc/helpers@0.5.23':
     resolution: {integrity: sha512-5lSsMOTXURePglDfvuAQUqkGek9Hg2kksOYay2m0+XR++b2NWYL/4sWyuvVBIs8oKnJaxkdi9whaL/sqN13afw==}
 
-  '@txtcel/protocol@0.9.0':
-    resolution: {integrity: sha512-c5uQquKbO4EhsVnB0BVbYnV6AHNNY7ple/nNFiskH978IAX3+lb/kZrK2/SX1lt+xJXVe06f43j1zSf9B0WN8A==}
+  '@txtcel/protocol@0.9.1':
+    resolution: {integrity: sha512-OgxTWW+HDgjkirsa4gTuiqS63u2W4Dqwhx9PfuAAphzrjZlD/ocwEHuwAZ/QIumlU60+0Ff6XKVOI0ox65+dhg==}
     engines: {node: '>=18'}
     peerDependencies:
       '@solana/web3.js': ^1.95.0
@@ -1852,7 +1852,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@txtcel/protocol@0.9.0(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
+  '@txtcel/protocol@0.9.1(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))':
     dependencies:
       '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@zorsh/zorsh': 0.4.0
