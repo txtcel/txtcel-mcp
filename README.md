@@ -53,7 +53,7 @@ Set via environment variables (see `.env.example`):
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `TXTCEL_PROGRAM_ID` | yes | – | Program address on the chosen cluster |
-| `TXTCEL_RPC` | no | `https://api.devnet.solana.com` | RPC HTTP endpoint (provider URL incl. API key) |
+| `TXTCEL_RPC` | yes | – | RPC HTTP endpoint of the cluster where the program is deployed (provider URL incl. API key) |
 | `TXTCEL_WS` | no | derived | Explicit WebSocket endpoint |
 | `TXTCEL_COMMITMENT` | no | `confirmed` | `processed` \| `confirmed` \| `finalized` |
 | `TXTCEL_PRIORITY_FEE` | no | `10000` | ComputeBudget price, micro-lamports per CU (`0` disables) |
@@ -69,7 +69,25 @@ and can spend everything in its wallet. Personal wallets (Solana CLI default,
 
 Add to your client's `mcp.json` (Cursor: `.cursor/mcp.json`):
 
-Published (recommended):
+Published (recommended), mainnet:
+
+```json
+{
+  "mcpServers": {
+    "txtcel": {
+      "command": "npx",
+      "args": ["-y", "@txtcel/mcp"],
+      "env": {
+        "TXTCEL_RPC": "<your mainnet RPC endpoint>",
+        "TXTCEL_PROGRAM_ID": "TXTCELhcJEVUMoMJxapBN7fsrX5rZ8Dr4dWDvkmboGY",
+        "TXTCEL_KEYPAIR": "/path/to/dedicated-agent-keypair.json"
+      }
+    }
+  }
+}
+```
+
+Devnet:
 
 ```json
 {
@@ -79,7 +97,7 @@ Published (recommended):
       "args": ["-y", "@txtcel/mcp"],
       "env": {
         "TXTCEL_RPC": "https://api.devnet.solana.com",
-        "TXTCEL_PROGRAM_ID": "<your program id>",
+        "TXTCEL_PROGRAM_ID": "<your devnet program id>",
         "TXTCEL_KEYPAIR": "/path/to/dedicated-agent-keypair.json"
       }
     }

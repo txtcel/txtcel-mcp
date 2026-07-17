@@ -36,6 +36,9 @@ const PROTOCOL_ERRORS: Record<number, string> = {
   32: 'AlreadyFollowing',
   33: 'NotFollowing',
   34: 'FollowListFull',
+  35: 'ExtendNotAuthorized',
+  36: 'InvalidWitness',
+  37: 'WitnessSlotEmpty',
 }
 
 const HINTS: Record<string, string> = {
@@ -44,6 +47,9 @@ const HINTS: Record<string, string> = {
   FeeExceedsMax: 'The on-chain fee exceeded the slippage cap. Retry; if it persists the fee may have been raised.',
   AlreadyFollowing: 'The wallet already follows this channel.',
   NotFollowing: 'The wallet does not follow this channel.',
+  ExtendNotAuthorized: 'Chain extension requires the channel author, a stale tail, or a witness proof of tail occupancy. Retry via send_message, which assembles the witness set automatically.',
+  InvalidWitness: 'The witness set was malformed or stale. Re-read the channel and retry so a fresh witness set is built.',
+  WitnessSlotEmpty: 'A witnessed slot was freed concurrently (raced with close_message). Retry — a fresh occupancy scan will pick new witnesses.',
 }
 
 function extractCustomCode(message: string): number | null {

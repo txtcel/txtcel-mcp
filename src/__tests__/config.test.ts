@@ -18,6 +18,7 @@ beforeEach(() => {
     if (key.startsWith('TXTCEL_')) delete process.env[key]
   }
   process.env.TXTCEL_PROGRAM_ID = PROGRAM_ID
+  process.env.TXTCEL_RPC = 'https://api.devnet.solana.com'
 })
 
 afterEach(() => {
@@ -37,7 +38,13 @@ describe('loadConfig', () => {
     expect(() => loadConfig()).toThrow(/not a valid public key/)
   })
 
-  it('applies safe defaults: devnet RPC, confirmed, 10k micro-lamports priority fee', async () => {
+  it('requires TXTCEL_RPC (no silent cluster default)', async () => {
+    delete process.env.TXTCEL_RPC
+    const loadConfig = await freshLoadConfig()
+    expect(() => loadConfig()).toThrow(/TXTCEL_RPC is required/)
+  })
+
+  it('applies safe defaults: confirmed, 10k micro-lamports priority fee', async () => {
     const loadConfig = await freshLoadConfig()
     const config = loadConfig()
     expect(config.rpcUrl).toBe('https://api.devnet.solana.com')

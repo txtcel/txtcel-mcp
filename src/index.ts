@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   const wallet = loadWallet()
 
   // Keep in sync with package.json — release CI enforces the match.
-  const server = new McpServer({ name: 'txtcel-mcp', version: '0.4.2' })
+  const server = new McpServer({ name: 'txtcel-mcp', version: '0.4.3' })
 
   registerMessagingTools(server)
   registerFollowTools(server)
