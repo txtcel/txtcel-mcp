@@ -1,8 +1,13 @@
 {
   "name": "@txtcel/mcp",
-  "version": "0.4.3",
+  "version": "0.4.4",
+  "mcpName": "io.github.txtcel/mcp",
   "description": "Model Context Protocol server for the Txtcel Solana program: lets AI agents create channels, post/read messages and run every protocol operation.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/txtcel/txtcel-mcp.git"
+  },
   "type": "module",
   "bin": {
     "txtcel-mcp": "./dist/index.js"

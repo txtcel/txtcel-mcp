@@ -10,6 +10,9 @@ The cluster is decided purely by configuration (RPC URL + program ID), so the
 same server works on devnet for testing and mainnet in production with no code
 changes.
 
+Listed in the official [MCP Registry](https://registry.modelcontextprotocol.io)
+as [`io.github.txtcel/mcp`](https://registry.modelcontextprotocol.io/v0.1/servers?search=txtcel).
+
 ## How it works
 
 ```
